@@ -8,12 +8,12 @@ This software has been tested on GNU/Linux.
 
 When configuring Fineco and Eastron meters with only the set button: Hold down the "set" button for a few seconds before changing registers on the meter.
 
-# Installation
-Clone this repo into a folder and install pymodbus:
+## Installation
+Clone this repo into a folder and install dependencies:
 
 ```
-pip3 install pymodbus
+pip3 install pymodbus pyserial
 ```
 
-# Examples
+## Examples
 
