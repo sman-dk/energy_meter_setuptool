@@ -8,6 +8,7 @@ __pycache__/
 
 # Other
 *.swp
+.idea/*
 
 # Distribution / packaging
 .Python
