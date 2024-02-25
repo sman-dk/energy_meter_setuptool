@@ -23,6 +23,7 @@ import sys
 import struct
 import pymodbus.client as modbusClient
 from pymodbus import ModbusException
+import time
 
 
 def ieee754(value_list):
@@ -30,6 +31,17 @@ def ieee754(value_list):
     bin_float = format(value_list[0] & 0xffff,'016b') + format(value_list[1] & 0xffff,'016b')
     packed_v = struct.pack('>L', int(bin_float, 2))
     return struct.unpack('>f', packed_v)[0]
+
+def reverse_ieee754(float_value):
+    '''Convert a float to an IEEE 754 32 bit single precision value list'''
+    # Pack the float as a 32-bit unsigned long (big-endian)
+    packed_v = struct.pack('>f', float_value)
+    # Unpack as a 32-bit unsigned long (big-endian) and convert to binary
+    bin_value = format(struct.unpack('>L', packed_v)[0], '032b')
+    # Split the binary string into two 16-bit parts and convert them to integers
+    value1 = int(bin_value[:16], 2)
+    value2 = int(bin_value[16:], 2)
+    return [value1, value2]
 
 def u32(value_list):
     '''Convert the value list as unsigned 32 bit integer'''
@@ -60,7 +72,7 @@ def address_limit(address):
         raise argparse.ArgumentTypeError('Argument must be < ' + str(min_val) + 'and > ' + str(max_val))
     return address
 
-def connect(args):
+def connect(args, new_baudrate=None):
     '''Connect to serial port or modbus gateway'''
     if args.host:
         # Modbus gateway
@@ -71,9 +83,13 @@ def connect(args):
 
     elif args.serial_port:
         # Serial rs485 port
+        if new_baudrate:
+            baudrate = new_baudrate
+        else:
+            baudrate = args.baudrate
         client = modbusClient.ModbusSerialClient(port=args.serial_port,
                                                  timeout=args.timeout,
-                                                 baudrate=args.baudrate,
+                                                 baudrate=baudrate,
                                                  bytesize=8,
                                                  parity='N',
                                                  stopbits=1)
@@ -116,6 +132,7 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'Serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
                     'Serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
                     'baudrate': [ 3, 0x1C, 2, '(integer)', 'F32' ],
+                    'set_baudrate': [ 16, 0x1C, 2, '', '' ],
                     },
                 'SDM120': 
                   { 'kWh': [ 4, 0x156, 2, 'kWh', 'F32' ],
@@ -130,6 +147,7 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'Serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
                     'Serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
                     'baudrate': [ 3, 0x1C, 2, '(integer)', 'F32' ],
+                    'set_baudrate': [ 16, 0x1C, 2, '', '' ],
                     },
                 'SDM230': 
                   { 'kWh': [ 4, 0x156, 2, 'kWh', 'F32' ],
@@ -144,6 +162,7 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'Serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
                     'Serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
                     'baudrate': [ 3, 0x1C, 2, '(integer)', 'F32' ],
+                    'set_baudrate': [ 16, 0x1C, 2, '', '' ],
                     },
                 'SDM630': 
                   { 'kWh': [ 4, 0x156, 2, 'kWh', 'F32' ],
@@ -162,6 +181,7 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'Serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
                     'Serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
                     'baudrate': [ 3, 0x1C, 2, '(integer)', 'F32' ],
+                    'set_baudrate': [ 16, 0x1C, 2, '', '' ],
                     },
                 'EM115': 
                   { 'kWh': [ 4, 0x16A, 2, 'kWh', 'F32' ],
@@ -182,6 +202,7 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'relay_state': [ 4, 0x566, 1, '(01..=on, 10..=off)', 'bin' ],
                     'set_relay_state': [ 16, 0x566, 2, '', '' ],
                     'baudrate': [ 4, 0x525, 1, '(integer)', 'U16' ],
+                    'set_baudrate': [ 16, 0x525, 1, '', '' ],
                      }, 
                 'EM737': 
                   { 'kWh': [ 4, 0x700, 2, 'kWh', 'F32' ],
@@ -202,6 +223,7 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'relay_state': [ 4, 0x566, 1, '(01..=on, 10..=off)', 'bin' ],
                     'set_relay_state': [ 16, 0x566, 2, '', '' ],
                     'baudrate': [ 4, 0x525, 1, '(integer)', 'U16' ],
+                    'set_baudrate': [ 16, 0x525, 1, '', '' ],
                     }
                 }
 
@@ -350,19 +372,18 @@ def voltage_test(args, client=None):
         print('Exiting!')
         sys.exit(1)
 
-def get_baudrate(args, client=None):
-    '''Get the configured baudrate of the meter'''
+def modbus_baudrate(args, new_baudrate=None, client=None):
+    '''Read or write the configured baudrate of the meter'''
+    assert new_baudrate in [None, '1200', '2400', '4800', '9600', '19200', '38400']
     meter_brand = None
     if args.meter_model[:2] == 'EM':
         # Seems like a Fineco meter
         meter_brand = 'Fineco'
-
-    if args.meter_model[:3] == 'SDM':
+    elif args.meter_model[:3] == 'SDM':
         # Seems like a Fineco meter
         meter_brand = 'Eastron'
-
-    if not meter_brand:
-        print(f'ERROR baudrate for {meter_brand} meters is not supported\nExiting!', file=sys.stderr)
+    else:
+        print(f'ERROR Baudrate settings for meter model {meter_model} is not supported in this script.\nExiting!', file=sys.stderr)
         sys.exit(1)
     
     # Fetch the raw value
@@ -387,10 +408,31 @@ def get_baudrate(args, client=None):
 
     print(f'The meter reports a baudrate of: {baudrate}')
 
-    return baudrate
-
-
-    return None
+    if not new_baudrate:
+        return baudrate, client
+    else:
+        # Set the new baudrate
+        new_baudrate = int(new_baudrate)
+        if meter_brand == 'Eastron':
+            new_value_float = list(baudrate_dict.keys())[list(baudrate_dict.values()).index(new_baudrate)]
+            new_value = reverse_ieee754(new_value_float)
+        elif meter_brand == 'Fineco':
+            new_value = new_baudrate
+        print('OBS remember to put the meter into "set" mode!')
+        print(f'Setting the baudrate to {new_baudrate}')
+        reading = modbus_req(args, 'set_baudrate', payload=new_value, client=client)
+        # Close the current connection and open a new (only if it is a serial connection, for modbus gateways the setting on the gateway must be changed
+        if not args.serial_port:
+            print('OBS: Since you are not communicating with the meter directly via a serial connection, then we can not validate that the setting is in effect. Please update the configuration of your modbus gateway to the new baudrate.')
+        else:
+            print('Checking that we can now communicate with the meter using the new baudrate')
+            # Get the new baudrate and confirm
+            client.close()
+            # Lets sleep for a sec as a precaution for the meter to adapt to the new reality
+            time.sleep(1)
+            client = connect(args, new_baudrate)
+            new_baudrate, client = modbus_baudrate(args, client=client)
+        return new_baudrate, client
 
 def get_unit_id(args, client=None):
     '''Get the configured unit id of the meter'''
@@ -428,7 +470,7 @@ def main():
         print("ERROR: at least one of the following arguments must be set: --serial-port or --host")
         sys.exit(1)
 
-    print('Starting Fineco setuptool')
+    print('Starting energy meter setup tool')
 
     # Connect
     client = connect(args)
@@ -449,7 +491,10 @@ def main():
         state = relay_state(args, set_state = args.set_relay, client=client)
 
     if args.get_baudrate:
-        baudrate = get_baudrate(args, client=client)
+        baudrate = modbus_baudrate(args, client=client)[0]
+    
+    if args.set_baudrate:
+        baudrate, client = modbus_baudrate(args, new_baudrate=args.set_baudrate, client=client)
 
     if args.get_unit_id:
         pass

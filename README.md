@@ -77,4 +77,19 @@ options:
 ```
 
 ## Examples
+Change the baudrate from 9600 to 19200 on a Fineco EM115:
 
+```
+# ./energy_meter_setup_tool.py --serial-port /dev/ttyUSB0 --baudrate 9600 -u 1 --meter-model EM115  --set-baudrate 19200
+Starting energy meter setup tool
+
+Trying to get voltage from meter model EM115 with unit id 1 
+
+Voltage is 232.0 V which seems ok!
+
+The meter reports a baudrate of: 9600
+OBS remember to put the meter into "set" mode!
+Setting the baudrate to 19200
+Checking that we can now communicate with the meter using the new baudrate
+The meter reports a baudrate of: 19200
+```
