@@ -47,6 +47,15 @@ def u32(value_list):
     '''Convert the value list as unsigned 32 bit integer'''
     return int(''.join(['{0:016b}'.format(i) for i in value_list]), 2)
 
+def reverse_u32(integer_value):
+    '''Convert an int into a value list as if it were a 32 bit integer'''
+    # Convert the integer to a 32-bit binary string
+    bin_value = format(integer_value, '032b')
+    # Split the binary string into two 16-bit parts and convert them to integers
+    value1 = int(bin_value[:16], 2)
+    value2 = int(bin_value[16:], 2)
+    return [value1, value2]
+
 def u16(value_list):
     '''Convert the value list as an unsigned 16 bit integer'''
     # Well this is almost too easy..
@@ -209,7 +218,7 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
                     'serial_no': [ 4, 0xFF00, 2, '(integer)', 'U32' ],
                     'serial_no_bin': [ 4, 0xFF00, 2, '(binary)', 'bin' ],
                     'serial_no_hex': [ 4, 0xFF00, 2, '(hex)', 'hex' ],
-                    'set_serial_no': [ 16, 0xFF00, 2, '', '' ],
+                    'set_serial_no': [ 16, 0xFF00, 2, '', 'U32' ],
                     'relay_state': [ 4, 0x566, 1, '(01..=on, 10..=off)', 'bin' ],
                     'set_relay_state': [ 16, 0x566, 2, '', '' ],
                     'baudrate': [ 4, 0x525, 1, '(integer)', 'U16' ],
@@ -233,7 +242,7 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
                     'serial_no': [ 4, 0xFF00, 2, '(integer)', 'U32' ],
                     'serial_no_bin': [ 4, 0xFF00, 2, '(binary)', 'bin' ],
                     'serial_no_hex': [ 4, 0xFF00, 2, '(hex)', 'hex' ],
-                    'set_serial_no': [ 16, 0xFF00, 2, '', '' ],
+                    'set_serial_no': [ 16, 0xFF00, 2, '', 'U32' ],
                     'relay_state': [ 4, 0x566, 1, '(01..=on, 10..=off)', 'bin' ],
                     'set_relay_state': [ 16, 0x566, 2, '', '' ],
                     'baudrate': [ 4, 0x525, 1, '(integer)', 'U16' ],
@@ -260,6 +269,8 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
             if data_type:
                 if data_type == 'F32':
                     payload = reverse_ieee754(payload)
+                elif data_type == 'U32':
+                    payload = reverse_u32(payload)
                 else:
                     print(f'ERROR data type for {register_name} using {function_code} is not supported. Please check the script.\nExiting!', sys.stderr)
                     sys.exit(1)
@@ -269,7 +280,6 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
             sys.exit(1)
         if res.isError():
             print(f'ERROR: We got an error back when requesting {register_name}:')
-            print(dir(res))
             if hasattr(res, 'encode'):
                 print('res.encode(): %s' % res.encode())
             if hasattr(res, 'function_code'):
@@ -476,19 +486,33 @@ def modbus_unit_id(args, unit_id=None, new_unit_id=None, client=None):
         print('WARNING wait what? The new unit id does not match what we set (how could this have happened?)')
     return unit_id
 
-def get_serial_number(args, client=None):
+def modbus_serial(args, client=None, new_serial=None):
     '''Get the configured serial number of the meter'''
-    reg_names = ['kWh', 'imp_kWh', 'power', 'L1A', 'L2A', 'L3A', 'L1V', 'L2V', 'L3V', 'Totpf', 'TotHz', 'serial_no', 'serial_no_bin', 'serial_no_hex', 'relay_state']
-    result = []
-    for register_name in reg_names:
+    for register_name in ['serial_no', 'serial_no_bin', 'serial_no_hex']:
         reading = modbus_req(args, register_name, client=client)
-        result.append(reading)
-        if printout:
-            if reading['value'] != None:
-                print(f'{register_name}: {reading["value"]} {reading["info_text"]}')
-
-    pass
-
+        serial_no = reading['value']
+        print(f'{register_name}: {serial_no} {reading["info_text"]}')
+    if new_serial:
+        if args.meter_model[:2] != 'EM':
+            # It is not a Fineco meter
+            print('ERROR it is only possible to change the serial number for Fineco meters.\nExiting!', file=sys.stderr)
+            sys.exit(1)
+        else:
+            # It is a Fineco meter
+            if new_serial[:2] == '0x':
+                # Its hex
+                new_serial_value = int(new_serial, 16)
+            elif new_serial[:2] == '0b':
+                new_serial_value = int(new_serial, 2)
+            else:
+                # It is neither hex or binary, then it must be an integer
+                new_serial_value = int(new_serial)
+            # Set the serial number
+            print(f'Setting the serial number to: {new_serial} / {new_serial_value} (int)')
+            reading = modbus_req(args, 'set_serial_no', payload=new_serial_value, client=client)
+            modbus_serial(args, client=client)
+        
+    return serial_no
 
 def main():
     ''' The main function '''
@@ -509,8 +533,8 @@ def main():
     parser.add_argument('-u', '--unit-id', help='Modbus unit id to use (1-255). This is the "slave id" or "address" of the modbus slave', default='1', type=address_limit,  )
     parser.add_argument('--get-unit-id', help='Get configured unit id of the meter', action='store_true')
     ch_group.add_argument('--set-unit-id', help='Set modbus unit id (1-255)', type=address_limit, )
-    parser.add_argument('--get-serial-number', help='Get configured serial number of the meter', action='store_true')
-    ch_group.add_argument('--set-serial-number', help='Set serial number. Multiple types are supported: Integers (e.g. "1234"), hexadecimal (e.g. "0x4d2") and binary (e.g. "0b10011010010")', type=str)
+    parser.add_argument('--get-serial', help='Get configured serial number of the meter', action='store_true')
+    ch_group.add_argument('--set-serial', help='Set serial number. Multiple types are supported: Integers (e.g. "1234"), hexadecimal (e.g. "0x4d2") and binary (e.g. "0b10011010010")', type=str)
     parser.add_argument('-t', '--timeout', help='Timeout in seconds', default=2, type=int)
     args = parser.parse_args()
     if not args.serial_port and not args.host:
@@ -547,8 +571,11 @@ def main():
     if args.set_unit_id:
         unit_id = modbus_unit_id(args, new_unit_id=args.set_unit_id, client=client)
 
-    if args.get_serial_number:
-        pass
+    if args.get_serial:
+        modbus_serial(args, client=client)
+
+    if args.set_serial:
+        modbus_serial(args, client=client, new_serial = args.set_serial)
 
     # Finishing up
     client.close()

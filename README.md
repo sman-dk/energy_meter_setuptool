@@ -42,7 +42,7 @@ pip3 install pymodbus pyserial
 usage: energy_meter_setup_tool.py [-h] [-p SERIAL_PORT | --host HOST] [-b BAUDRATE] [--get-baudrate]
                                   [--set-baudrate {1200,2400,4800,9600,19200,38400}] [--tcp-port TCP_PORT] [-c] -m
                                   {EM115,EM737,SDM72,SDM120,SDM230,SDM630} [--get-relay] [--set-relay {on,off,auto,0,1}] [-u UNIT_ID]
-                                  [--get-unit-id] [--set-unit-id SET_UNIT_ID] [--get-serial-number] [--set-serial-number SET_SERIAL_NUMBER]
+                                  [--get-unit-id] [--set-unit-id SET_UNIT_ID] [--get-serial] [--set-serial SET_SERIAL]
                                   [-t TIMEOUT]
 
 Read and write to various modbus registers on Fineco energy meters. E.g. Fineco EM115 DO DC. or Eastron meters (e.g. SDM120)
@@ -69,8 +69,8 @@ options:
   --get-unit-id         Get configured unit id of the meter
   --set-unit-id SET_UNIT_ID
                         Set modbus unit id (1-255)
-  --get-serial-number   Get configured serial number of the meter
-  --set-serial-number SET_SERIAL_NUMBER
+  --get-serial          Get configured serial number of the meter
+  --set-serial        SET_SERIAL
                         Set serial number. Multiple types are supported: Integers (e.g. "1234"), hexadecimal (e.g. "0x4d2") and binary (e.g.
                         "0b10011010010")
   -t TIMEOUT, --timeout TIMEOUT
