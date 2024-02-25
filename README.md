@@ -8,8 +8,6 @@ Command line tool to communicate with energy meters from Fineco and Eastron via 
 - Update the relay state on Fineco meters.
 - Change baudrate, unit id ('modbus address'), and serial number (useful for setting up new meters)
 
-Both modbus rtu via a serial device (e.g. USB rs485 adaptor) as well as modbus gateways (e.g. Volison ADM5850G or Cdebyte NB114) are supported.
-
 ## Supported models
 - Fineco EM115
 - Fineco EM737
