@@ -32,7 +32,7 @@ This software has been tested on GNU/Linux.
 When configuring Fineco and Eastron meters with only one button: Hold down the "set" button for a few seconds before trying to change the baudrate etc. on the meter.
 
 ## Installation
-Clone this repo into a folder and install dependencies:
+Clone this repo into a folder and install the following dependencies:
 
 ```
 pip3 install pymodbus pyserial
