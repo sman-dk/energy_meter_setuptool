@@ -40,8 +40,8 @@ pip3 install pymodbus pyserial
 
 ## Usage
 ```
-# ./meter_setuptools.py -h
-usage: fineco_setuptool.py [-h] [-p SERIAL_PORT | --host HOST] [-b BAUDRATE] [--get-baudrate]
+# ./energy_meter_setup_tool.py -h
+usage: energy_meter_setup_tool.py [-h] [-p SERIAL_PORT | --host HOST] [-b BAUDRATE] [--get-baudrate]
                            [--set-baudrate {1200,2400,4800,9600,19200,38400}] [--tcp-port TCP_PORT] [-c] -m
                            {EM115,EM737,SDM72,SDM120,SDM230,SDM630} [-r] [-s {on,off,auto,0,1}] [-u UNIT_ID] [--get-unit-id]
                            [--set-unit-id SET_UNIT_ID] [--get-serial-number] [--set-serial-number SET_SERIAL_NUMBER] [-t TIMEOUT]
