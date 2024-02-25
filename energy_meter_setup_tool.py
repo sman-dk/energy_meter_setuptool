@@ -592,7 +592,7 @@ def main():
         state = modbus_relay(args, client=client)
 
     if args.get_baudrate or args.set_baudrate:
-        baudrate, client = modbus_baudrate(args, client=client)[0]
+        baudrate, client = modbus_baudrate(args, client=client)
 
     if args.get_unit_id or args.set_unit_id:
         unit_id = modbus_unit_id(args, client=client)
