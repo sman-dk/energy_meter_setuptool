@@ -350,7 +350,7 @@ def relay_state(args, set_state=None, client=None):
         sys.exit(1)
 
     # Get relay state
-    cur_state = get_relay_state(args, client=None);
+    cur_state = get_relay_state(args, client=client);
     if set_state == cur_state:
         # There is really not much for us to do here..
         print(f'Relay state is already: {cur_state}')
@@ -377,7 +377,7 @@ def relay_state(args, set_state=None, client=None):
     reading = modbus_req(args, 'set_relay_state', client=client, payload = [key, state_value])
 
     # Get and confirm relay state
-    cur_state = get_relay_state(args, client=None);
+    cur_state = get_relay_state(args, client=client);
     print(f'Current relay state is: {cur_state}')
     if not cur_state == set_state:
         print('WARNING it seems the relay state was not changed as we expected. We failed. Sorry...')
