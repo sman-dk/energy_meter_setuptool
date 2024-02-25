@@ -107,11 +107,13 @@ def fineco_generate_key(meter_serial_number):
     tmp &= 0x1234
     return tmp
 
-def modbus_req(args, register_name, client=None, payload=None):
+def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
     '''Fetch a register from a meter and return the value as a result'''
     assert type(register_name) is str
     if not client:
         client = connect(args)
+    if not unit_id:
+        unit_id = args.unit_id
 
     # Function code, hex address, count/length of registers to read (multiple of 2 bytes, i.e. 2=4bytes), info text (e.g. unit), response type (how to interpret the response)
     meter_regs = { 
@@ -128,11 +130,13 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'L3V': [ 4, 0x4, 2, 'V', 'F32' ],
                     'Totpf': [ 4, 0x3E, 2, '', 'F32' ],
                     'TotHz': [ 4, 0x46, 2, 'Hz', 'F32' ],
-                    'Serial_no': [ 3, 0xFC00, 2, '(integer)', 'U32' ],
-                    'Serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
-                    'Serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
+                    'serial_no': [ 3, 0xFC00, 2, '(integer)', 'U32' ],
+                    'serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
+                    'serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
                     'baudrate': [ 3, 0x1C, 2, '(integer)', 'F32' ],
-                    'set_baudrate': [ 16, 0x1C, 2, '', '' ],
+                    'set_baudrate': [ 16, 0x1C, 2, '', 'F32' ],
+                    'unit_id': [ 3, 0x14, 2, '(modbus id/address)', 'F32' ],
+                    'set_unit_id': [ 16, 0x14, 2, '', 'F32' ],
                     },
                 'SDM120': 
                   { 'kWh': [ 4, 0x156, 2, 'kWh', 'F32' ],
@@ -143,11 +147,13 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'L1V': [ 4, 0x0, 2, 'V', 'F32' ], 
                     'Totpf': [ 4, 0x3E, 2, '', 'F32' ],
                     'TotHz': [ 4, 0x46, 2, 'Hz', 'F32' ],
-                    'Serial_no': [ 3, 0xFC00, 2, '(integer)', 'U32' ],
-                    'Serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
-                    'Serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
+                    'serial_no': [ 3, 0xFC00, 2, '(integer)', 'U32' ],
+                    'serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
+                    'serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
                     'baudrate': [ 3, 0x1C, 2, '(integer)', 'F32' ],
-                    'set_baudrate': [ 16, 0x1C, 2, '', '' ],
+                    'set_baudrate': [ 16, 0x1C, 2, '', 'F32' ],
+                    'unit_id': [ 3, 0x14, 2, '(modbus id/address)', 'F32' ],
+                    'set_unit_id': [ 16, 0x14, 2, '', 'F32' ],
                     },
                 'SDM230': 
                   { 'kWh': [ 4, 0x156, 2, 'kWh', 'F32' ],
@@ -158,11 +164,13 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'L1V': [ 4, 0x0, 2, 'V', 'F32' ], 
                     'Totpf': [ 4, 0x3E, 2, '', 'F32' ],
                     'TotHz': [ 4, 0x46, 2, 'Hz', 'F32' ],
-                    'Serial_no': [ 3, 0xFC00, 2, '(integer)', 'U32' ],
-                    'Serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
-                    'Serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
+                    'serial_no': [ 3, 0xFC00, 2, '(integer)', 'U32' ],
+                    'serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
+                    'serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
                     'baudrate': [ 3, 0x1C, 2, '(integer)', 'F32' ],
-                    'set_baudrate': [ 16, 0x1C, 2, '', '' ],
+                    'set_baudrate': [ 16, 0x1C, 2, '', 'F32' ],
+                    'unit_id': [ 3, 0x14, 2, '(modbus id/address)', 'F32' ],
+                    'set_unit_id': [ 16, 0x14, 2, '', 'F32' ],
                     },
                 'SDM630': 
                   { 'kWh': [ 4, 0x156, 2, 'kWh', 'F32' ],
@@ -177,11 +185,13 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'L3V': [ 4, 0x4, 2, 'V', 'F32' ],
                     'Totpf': [ 4, 0x3E, 2, '', 'F32' ],
                     'TotHz': [ 4, 0x46, 2, 'Hz', 'F32' ],
-                    'Serial_no': [ 3, 0xFC00, 2, '(integer)', 'U32' ],
-                    'Serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
-                    'Serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
+                    'serial_no': [ 3, 0xFC00, 2, '(integer)', 'U32' ],
+                    'serial_no_bin': [ 3, 0xFC00, 2, '(binary)', 'bin' ],
+                    'serial_no_hex': [ 3, 0xFC00, 2, '(hex)', 'hex' ],
                     'baudrate': [ 3, 0x1C, 2, '(integer)', 'F32' ],
-                    'set_baudrate': [ 16, 0x1C, 2, '', '' ],
+                    'set_baudrate': [ 16, 0x1C, 2, '', 'F32' ],
+                    'unit_id': [ 3, 0x14, 2, '(modbus id/address)', 'F32' ],
+                    'set_unit_id': [ 16, 0x14, 2, '', 'F32' ],
                     },
                 'EM115': 
                   { 'kWh': [ 4, 0x16A, 2, 'kWh', 'F32' ],
@@ -196,13 +206,16 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'L3V': [ 4, 0x0, 2, 'V', 'F32' ],
                     'Totpf': [ 4, 0xE, 2, '', 'F32' ],
                     'TotHz': [ 4, 0x4, 2, 'Hz', 'F32' ],
-                    'Serial_no': [ 4, 0xFF00, 2, '(integer)', 'U32' ],
-                    'Serial_no_bin': [ 4, 0xFF00, 2, '(binary)', 'bin' ],
-                    'Serial_no_hex': [ 4, 0xFF00, 2, '(hex)', 'hex' ],
+                    'serial_no': [ 4, 0xFF00, 2, '(integer)', 'U32' ],
+                    'serial_no_bin': [ 4, 0xFF00, 2, '(binary)', 'bin' ],
+                    'serial_no_hex': [ 4, 0xFF00, 2, '(hex)', 'hex' ],
+                    'set_serial_no': [ 16, 0xFF00, 2, '', '' ],
                     'relay_state': [ 4, 0x566, 1, '(01..=on, 10..=off)', 'bin' ],
                     'set_relay_state': [ 16, 0x566, 2, '', '' ],
                     'baudrate': [ 4, 0x525, 1, '(integer)', 'U16' ],
                     'set_baudrate': [ 16, 0x525, 1, '', '' ],
+                    'unit_id': [ 4, 0x524, 1, '(modbus id/address)', 'U16' ],
+                    'set_unit_id': [ 16, 0x524, 1, '', '' ],
                      }, 
                 'EM737': 
                   { 'kWh': [ 4, 0x700, 2, 'kWh', 'F32' ],
@@ -217,13 +230,16 @@ def modbus_req(args, register_name, client=None, payload=None):
                     'L3V': [ 4, 0x14, 2, 'V', 'F32' ],
                     'Totpf': [ 4, 0x3E, 2, '', 'F32' ],
                     'TotHz': [ 4, 0x40, 2, 'Hz', 'F32' ],
-                    'Serial_no': [ 4, 0xFF00, 2, '(integer)', 'U32' ],
-                    'Serial_no_bin': [ 4, 0xFF00, 2, '(binary)', 'bin' ],
-                    'Serial_no_hex': [ 4, 0xFF00, 2, '(hex)', 'hex' ],
+                    'serial_no': [ 4, 0xFF00, 2, '(integer)', 'U32' ],
+                    'serial_no_bin': [ 4, 0xFF00, 2, '(binary)', 'bin' ],
+                    'serial_no_hex': [ 4, 0xFF00, 2, '(hex)', 'hex' ],
+                    'set_serial_no': [ 16, 0xFF00, 2, '', '' ],
                     'relay_state': [ 4, 0x566, 1, '(01..=on, 10..=off)', 'bin' ],
                     'set_relay_state': [ 16, 0x566, 2, '', '' ],
                     'baudrate': [ 4, 0x525, 1, '(integer)', 'U16' ],
                     'set_baudrate': [ 16, 0x525, 1, '', '' ],
+                    'unit_id': [ 3, 0x524, 1, '(modbus id/address)', 'U16' ],
+                    'set_unit_id': [ 16, 0x524, 1, '', '' ],
                     }
                 }
 
@@ -232,16 +248,22 @@ def modbus_req(args, register_name, client=None, payload=None):
         info_text = 'Not supported for this model'
         value = None
     else:
-        function_code, address, count, info_text, response_type = mregs[register_name]
+        function_code, address, count, info_text, data_type = mregs[register_name]
         if function_code == 3:
-            res = client.read_holding_registers(address, count, args.unit_id)
+            res = client.read_holding_registers(address, count, unit_id)
         elif function_code == 4:
-            res = client.read_input_registers(address, count, args.unit_id)
+            res = client.read_input_registers(address, count, unit_id)
         elif function_code == 16:
             if not payload:
                 print(f'ERROR missing payload for {register_name}\nExiting!', sys.stderr)
                 sys.exit(1)
-            res = client.write_registers(address, payload, args.unit_id)
+            if data_type:
+                if data_type == 'F32':
+                    payload = reverse_ieee754(payload)
+                else:
+                    print(f'ERROR data type for {register_name} using {function_code} is not supported. Please check the script.\nExiting!', sys.stderr)
+                    sys.exit(1)
+            res = client.write_registers(address, payload, unit_id)
         else:
             print('ERROR: Unsupported function code. This should not be happening (check that all function codes are supported in the script).\nExiting!', file=sys.stderr)
             sys.exit(1)
@@ -258,17 +280,17 @@ def modbus_req(args, register_name, client=None, payload=None):
             sys.exit(1)
         regs = res.registers
         if regs:
-            if response_type == 'F32':
+            if data_type == 'F32':
                 value = ieee754(regs)
-            elif response_type == 'U32':
+            elif data_type == 'U32':
                 value = u32(regs)
-            elif response_type == 'U16':
+            elif data_type == 'U16':
                 value = u16(regs)
-            elif response_type == 'bin':
+            elif data_type == 'bin':
                 value = binary(regs)
-            elif response_type == 'hex':
+            elif data_type == 'hex':
                 value = hex_str(regs)
-            elif response_type == '':
+            elif data_type == '':
                 value = None
             else:
                 print('ERROR: Response type not supported. This should not be happening (check that all response types are supported in the script).\nExiting!', file=sys.stderr)
@@ -279,7 +301,7 @@ def modbus_req(args, register_name, client=None, payload=None):
 
 def modbus_req_alot(client, args, printout = False):
     '''Fetch a lot bunch of registers. Used for "curious mode" where we fetch a bunch of registers if available'''
-    reg_names = ['kWh', 'imp_kWh', 'power', 'L1A', 'L2A', 'L3A', 'L1V', 'L2V', 'L3V', 'Totpf', 'TotHz', 'Serial_no', 'Serial_no_bin', 'Serial_no_hex', 'relay_state']
+    reg_names = ['kWh', 'imp_kWh', 'power', 'L1A', 'L2A', 'L3A', 'L1V', 'L2V', 'L3V', 'Totpf', 'TotHz', 'serial_no', 'serial_no_bin', 'serial_no_hex', 'relay_state']
     result = []
     for register_name in reg_names:
         reading = modbus_req(args, register_name, client=client)
@@ -326,7 +348,7 @@ def relay_state(args, set_state=None, client=None):
     print(f'Current relay state is: {cur_state}')
 
     # Get serial
-    reading = modbus_req(args, 'Serial_no', client=client)
+    reading = modbus_req(args, 'serial_no', client=client)
     serial_no = reading['value']
     print(f'The meter has serial number: {serial_no}')
 
@@ -415,7 +437,6 @@ def modbus_baudrate(args, new_baudrate=None, client=None):
         new_baudrate = int(new_baudrate)
         if meter_brand == 'Eastron':
             new_value_float = list(baudrate_dict.keys())[list(baudrate_dict.values()).index(new_baudrate)]
-            new_value = reverse_ieee754(new_value_float)
         elif meter_brand == 'Fineco':
             new_value = new_baudrate
         print('OBS remember to put the meter into "set" mode!')
@@ -434,12 +455,38 @@ def modbus_baudrate(args, new_baudrate=None, client=None):
             new_baudrate, client = modbus_baudrate(args, client=client)
         return new_baudrate, client
 
-def get_unit_id(args, client=None):
-    '''Get the configured unit id of the meter'''
-    pass
+def modbus_unit_id(args, unit_id=None, new_unit_id=None, client=None):
+    '''Read and write the configured unit id of the meter'''
+    if not unit_id:
+        unit_id = args.unit_id
+    # Get the current unit id
+    reading = modbus_req(args, 'unit_id', client=client, unit_id=unit_id)
+    unit_id = int(reading['value'])
+    print(f'The meter reports unit id: {unit_id}')
+    if not new_unit_id:
+        return unit_id
+
+    # Note: In a perfect world we would check if the new unit id not used by anyone else, however I have not found a fool proof way to check that
+    # Set the new modbus id
+    print(f'Setting the unit id to: {new_unit_id}')
+    reading = modbus_req(args, 'set_unit_id', payload=new_unit_id, client=client)
+    # Check if the new modbus id is answering
+    unit_id = modbus_unit_id(args, client=client, unit_id=new_unit_id)
+    if not unit_id == new_unit_id:
+        print('WARNING wait what? The new unit id does not match what we set (how could this have happened?)')
+    return unit_id
 
 def get_serial_number(args, client=None):
     '''Get the configured serial number of the meter'''
+    reg_names = ['kWh', 'imp_kWh', 'power', 'L1A', 'L2A', 'L3A', 'L1V', 'L2V', 'L3V', 'Totpf', 'TotHz', 'serial_no', 'serial_no_bin', 'serial_no_hex', 'relay_state']
+    result = []
+    for register_name in reg_names:
+        reading = modbus_req(args, register_name, client=client)
+        result.append(reading)
+        if printout:
+            if reading['value'] != None:
+                print(f'{register_name}: {reading["value"]} {reading["info_text"]}')
+
     pass
 
 
@@ -457,14 +504,14 @@ def main():
     parser.add_argument('--tcp-port', help='Modbus gateway TCP port', default=502, type=int)
     parser.add_argument('-c', '--curious', help='Curious mode. Ask the meter about various registers', action='store_true')
     parser.add_argument('-m', '--meter-model', help='Meter model', choices = ['EM115', 'EM737', 'SDM72', 'SDM120', 'SDM230', 'SDM630'], required=True)
-    parser.add_argument('-r', '--read-relay', help='Read relay state', action='store_true')
-    ch_group.add_argument('-s', '--set-relay', help='Set relay state', choices=['on', 'off', 'auto', '0', '1'], default=False)
+    parser.add_argument('--get-relay', help='Get relay state', action='store_true')
+    ch_group.add_argument('--set-relay', help='Set relay state', choices=['on', 'off', 'auto', '0', '1'], default=False)
     parser.add_argument('-u', '--unit-id', help='Modbus unit id to use (1-255). This is the "slave id" or "address" of the modbus slave', default='1', type=address_limit,  )
     parser.add_argument('--get-unit-id', help='Get configured unit id of the meter', action='store_true')
     ch_group.add_argument('--set-unit-id', help='Set modbus unit id (1-255)', type=address_limit, )
     parser.add_argument('--get-serial-number', help='Get configured serial number of the meter', action='store_true')
-    ch_group.add_argument('--set-serial-number', help='Set serial number (get the current serial number by using --curious). Multiple types are supported: Integers (e.g. "1234"), hexadecimal (e.g. "0x4d2") and binary (e.g. "0b10011010010")', type=str)
-    parser.add_argument('-t', '--timeout', help='Request timeout', default=2, type=int)
+    ch_group.add_argument('--set-serial-number', help='Set serial number. Multiple types are supported: Integers (e.g. "1234"), hexadecimal (e.g. "0x4d2") and binary (e.g. "0b10011010010")', type=str)
+    parser.add_argument('-t', '--timeout', help='Timeout in seconds', default=2, type=int)
     args = parser.parse_args()
     if not args.serial_port and not args.host:
         print("ERROR: at least one of the following arguments must be set: --serial-port or --host")
@@ -482,12 +529,10 @@ def main():
         # Fetch some more registers
         readings = modbus_req_alot(client, args, printout=True)
 
-    if args.read_relay:
-        # Read relay state
+    if args.get_relay:
         state = relay_state(args, client=client)
 
     if args.set_relay:
-        # Set relay state
         state = relay_state(args, set_state = args.set_relay, client=client)
 
     if args.get_baudrate:
@@ -497,7 +542,10 @@ def main():
         baudrate, client = modbus_baudrate(args, new_baudrate=args.set_baudrate, client=client)
 
     if args.get_unit_id:
-        pass
+        unit_id = modbus_unit_id(args, client=client)
+
+    if args.set_unit_id:
+        unit_id = modbus_unit_id(args, new_unit_id=args.set_unit_id, client=client)
 
     if args.get_serial_number:
         pass
