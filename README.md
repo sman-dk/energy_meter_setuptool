@@ -17,8 +17,14 @@ Both modbus rtu via a serial device (e.g. USB rs485 adaptor) as well as modbus g
 - Eastron SDM120
 - Eastron SDM230
 - Eastron SDM630
-Read kWh and set modbus address, baud rate etc. via RS485 modbus for Fineco energy meters (e.g. Fineco EM115 MOD DO DC) and various Eastron meters (e.g. SDM120, SDM72D, SDM630 etc.). Both serial devices and modbus gateways (e.g. Volison ADM5850G or Cdebyte NB114) are supported
-The script may also read kWh, voltage, relay state (if applicable) and other parameters.
+
+For the Fineco meters, the DO (Direct Output) versions with a build in relay are supported too.
+
+## Supported modbus capabilities
+You may communicate to your energy meters using this script using either of the following:
+
+- serial device (e.g. a USB rs485 converter)
+- modbus gateway (e.g. Volison ADM5850G or Cdebyte NB114)
 
 ## Notes
 This software has been tested on GNU/Linux.
