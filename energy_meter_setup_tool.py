@@ -428,7 +428,7 @@ def voltage_test(args, client=None):
         sys.exit(1)
 
 
-def modbus_baudrate(args, client=None):
+def modbus_baudrate(args, client=None, read_only=None):
     """Read or write the configured baudrate of the meter"""
     assert args.set_baudrate in [None, '1200', '2400', '4800', '9600', '19200', '38400']
     if args.meter_model[:2] == 'EM':
@@ -465,7 +465,7 @@ def modbus_baudrate(args, client=None):
 
     print(f'The meter reports a baudrate of: {baudrate}')
 
-    if not args.set_baudrate:
+    if not args.set_baudrate or not read_only:
         return baudrate, client
     else:
         # Set the new baudrate
