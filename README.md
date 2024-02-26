@@ -38,7 +38,7 @@ pip3 install pymodbus pyserial
 
 ## Usage
 ```
-# ./energy_meter_setuptool.py -h
+$ ./energy_meter_setuptool.py -h
 usage: energy_meter_setuptool.py [-h] [-p SERIAL_PORT | --host HOST] [-b BAUDRATE] [--get-baudrate]
                                   [--set-baudrate {1200,2400,4800,9600,19200,38400}] [--tcp-port TCP_PORT] [-c] -m
                                   {EM115,EM737,SDM72,SDM120,SDM230,SDM630} [--get-relay] [--set-relay {on,off,auto,0,1}] [-u UNIT_ID]
@@ -80,7 +80,7 @@ options:
 ## Examples
 Get various info from a Fineco EM115 meter:
 ```
-# ./energy_meter_setuptool.py --serial-port /dev/ttyUSB0 --baudrate 9600 --unit-id 1 --meter-model EM115 --curious
+$ ./energy_meter_setuptool.py --serial-port /dev/ttyUSB0 --baudrate 9600 --unit-id 1 --meter-model EM115 --curious
 Starting energy meter setup tool
 
 Trying to get voltage from meter model EM115 with unit id 1 
@@ -106,7 +106,7 @@ relay_state: 1010101010101010 (01..=on, 10..=off)
 
 Set the relay state to on for a Fineco EM115 meter:
 ```
-# ./energy_meter_setuptool.py --serial-port /dev/ttyUSB0 --baudrate 9600 --unit-id 1 --meter-model EM115 --set-relay on
+$ ./energy_meter_setuptool.py --serial-port /dev/ttyUSB0 --baudrate 9600 --unit-id 1 --meter-model EM115 --set-relay on
 Starting energy meter setup tool
 
 Trying to get voltage from meter model EM115 with unit id 1 
@@ -123,7 +123,7 @@ Current relay state is: on
 Change the baudrate from 9600 to 19200 on a Fineco EM115 meter:
 
 ```
-# ./energy_meter_setuptool.py --serial-port /dev/ttyUSB0 --baudrate 9600 -u 1 --meter-model EM115  --set-baudrate 19200
+$ ./energy_meter_setuptool.py --serial-port /dev/ttyUSB0 --baudrate 9600 -u 1 --meter-model EM115  --set-baudrate 19200
 Starting energy meter setup tool
 
 Trying to get voltage from meter model EM115 with unit id 1 
@@ -139,7 +139,7 @@ The meter reports a baudrate of: 19200
 
 Change the unit id ("modbus address") from 6 to 3 for an Eastron SDM120 meter using a modbus gateway called modbus-gw.example.com:
 ```
-# ./energy_meter_setuptool.py --host modbus-gw.example.com --unit-id 6 --meter-model SDM120 --set-unit-id 3
+$ ./energy_meter_setuptool.py --host modbus-gw.example.com --unit-id 6 --meter-model SDM120 --set-unit-id 3
 Starting energy meter setup tool
 
 Trying to get voltage from meter model SDM120 with unit id 6 
