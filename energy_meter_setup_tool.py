@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# energy_meter_setup_tool A tool to communicate via rs485 modbus with Fineco and Eastron electricity meters
+# energy_meter_setuptool A tool to communicate via rs485 modbus with Fineco and Eastron electricity meters
 #
 #    Copyright (C) 2024 Georg Sluyterman van Langeweyde
 #
@@ -556,7 +556,7 @@ def modbus_serial(args, client=None, set_serial=None):
 def main():
     """ The main function """
     # Argument parsing
-    parser = argparse.ArgumentParser(prog='energy_meter_setup_tool.py',
+    parser = argparse.ArgumentParser(prog='energy_meter_setuptool.py',
                                      description='Read and write to various modbus registers on Fineco energy meters. '
                                                  'E.g. Fineco EM115 DO DC. or Eastron meters (e.g. SDM120)')
     ch_group = parser.add_mutually_exclusive_group()
