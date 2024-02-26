@@ -512,7 +512,7 @@ def modbus_unit_id(args, unit_id=None, client=None, read_only=None):
     print(f'Setting the unit id to: {args.set_unit_id}')
     reading = modbus_req(args, 'set_unit_id', payload=args.set_unit_id, client=client)
     # Check if the new modbus id is answering
-    unit_id = modbus_unit_id(args, client=client, unit_id=args.set_unit_id)
+    unit_id = modbus_unit_id(args, client=client, unit_id=args.set_unit_id, read_only=True)
     if not unit_id == args.set_unit_id:
         print('WARNING wait what? The new unit id does not match what we set (how could this have happened?)')
     return unit_id
