@@ -36,7 +36,7 @@ pip3 install pymodbus pyserial
 ```
 
 ## Usage
-```
+```commandline
 $ ./energy_meter_setuptool.py -h
 usage: energy_meter_setuptool.py [-h] [-p SERIAL_PORT | --host HOST] [-b BAUDRATE] [--get-baudrate]
                                   [--set-baudrate {1200,2400,4800,9600,19200,38400}] [--tcp-port TCP_PORT] [-c] -m
