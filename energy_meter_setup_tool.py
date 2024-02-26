@@ -518,13 +518,13 @@ def modbus_unit_id(args, unit_id=None, client=None, read_only=None):
     return unit_id
 
 
-def modbus_serial(args, client=None):
+def modbus_serial(args, client=None, read_only=None):
     """Get the configured serial number of the meter"""
     for register_name in ['serial_no', 'serial_no_bin', 'serial_no_hex']:
         reading = modbus_req(args, register_name, client=client)
         serial_no = reading['value']
         print(f'{register_name}: {serial_no} {reading["info_text"]}')
-    if args.set_serial:
+    if not read_only and args.set_serial:
         if args.meter_model[:2] != 'EM':
             # It is not a Fineco meter
             print('ERROR it is only possible to change the serial number for Fineco meters.\nExiting!', file=sys.stderr)
@@ -542,7 +542,7 @@ def modbus_serial(args, client=None):
             # Set the serial number
             print(f'Setting the serial number to: {args.set_serial} / {new_serial_value} (int)')
             reading = modbus_req(args, 'set_serial_no', payload=new_serial_value, client=client)
-            modbus_serial(args, client=client)
+            modbus_serial(args, client=client, read_only=True)
         
     return serial_no
 
