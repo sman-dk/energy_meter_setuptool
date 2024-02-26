@@ -111,7 +111,8 @@ def connect(args, new_baudrate=None):
                                                   parity='N',
                                                   stopbits=1)
     else:
-        print('Neither a serial port or a host has been defined. I can not work like this!!', file=sys.stderr)
+        print('Neither a serial port or a host has been defined. '
+              'I can not work like this!!\nExiting!', file=sys.stderr)
         sys.exit(1)
  
     return client
@@ -274,7 +275,7 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
         elif function_code == 4:
             res = client.read_input_registers(address, count, unit_id)
         elif function_code == 16:
-            if not payload:
+            if payload is None:
                 print(f'ERROR missing payload for {register_name}\nExiting!', sys.stderr)
                 sys.exit(1)
             if data_type:
@@ -283,7 +284,7 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
                 elif data_type == 'U32':
                     payload = reverse_u32(payload)
                 else:
-                    print(f'ERROR data type for {register_name} using {function_code} is not supported. '
+                    print(f'ERROR data type for {register_name} using function code {function_code} is not supported. '
                           f'Please check the script.\nExiting!', sys.stderr)
                     sys.exit(1)
             res = client.write_registers(address, payload, unit_id)
