@@ -350,14 +350,13 @@ def get_relay_state(args, client=None):
     return cur_state
 
 
-def modbus_relay(args, client=None):
-    """Check and change the relay state of a meter. If set_state is not set, then the relay state is not altered."""
-    set_state = args.set_relay
+def modbus_relay(args, client=None, set_relay=None):
+    """Check and change the relay state of a meter. If set_relay is not set, then the relay state is not altered."""
     # Support for state as an integer
-    if set_state in [0, '0']:
-        set_state = 'off'
-    if set_state in [1, '1']:
-        set_state = 'on'
+    if set_relay in [0, '0']:
+        set_relay = 'off'
+    if set_relay in [1, '1']:
+        set_relay = 'on'
 
     # Basic check of meter model
     if args.meter_model[:2] != 'EM':
@@ -366,14 +365,14 @@ def modbus_relay(args, client=None):
         sys.exit(1)
 
     # Check if we can work with the relay state variable
-    if set_state not in [None, 'on', 'off', 'auto']:
-        print(f'ERROR relay_state() called with relay state "{set_state}" '
+    if set_relay not in [None, 'on', 'off', 'auto']:
+        print(f'ERROR relay_state() called with relay state "{set_relay}" '
               f'which is not supported!\nExiting!', file=sys.stderr)
         sys.exit(1)
 
     # Get relay state
     cur_state = get_relay_state(args, client=client)
-    if set_state == cur_state:
+    if set_relay == cur_state:
         # There is really not much for us to do here...
         print(f'Relay state is already: {cur_state}')
         return cur_state
@@ -389,19 +388,19 @@ def modbus_relay(args, client=None):
     print(f'Calculated "key" based on s/n: {key}')
 
     # If this is a "read only" run
-    if not set_state:
-        return set_state
+    if not set_relay:
+        return set_relay
 
     # Set relay state
-    print(f'Setting relay state to: {set_state}')
+    print(f'Setting relay state to: {set_relay}')
     state_value_dict = {'on': 21845, 'off': 43690, 'auto': 34952}
-    state_value = state_value_dict[set_state]
+    state_value = state_value_dict[set_relay]
     reading = modbus_req(args, 'set_relay_state', client=client, payload=[key, state_value])
 
     # Get and confirm relay state
     cur_state = get_relay_state(args, client=client)
     print(f'Current relay state is: {cur_state}')
-    if not cur_state == set_state:
+    if not cur_state == set_relay:
         print('WARNING it seems the relay state was not changed as we expected. We failed. Sorry...')
 
     return cur_state
@@ -428,9 +427,9 @@ def voltage_test(args, client=None):
         sys.exit(1)
 
 
-def modbus_baudrate(args, client=None, read_only=None):
+def modbus_baudrate(args, client=None, set_baudrate=None):
     """Read or write the configured baudrate of the meter"""
-    assert args.set_baudrate in [None, '1200', '2400', '4800', '9600', '19200', '38400']
+    assert set_baudrate in [None, '1200', '2400', '4800', '9600', '19200', '38400']
     if args.meter_model[:2] == 'EM':
         # Seems like a Fineco meter
         meter_brand = 'Fineco'
@@ -465,11 +464,11 @@ def modbus_baudrate(args, client=None, read_only=None):
 
     print(f'The meter reports a baudrate of: {baudrate}')
 
-    if read_only or not args.set_baudrate:
+    if not set_baudrate:
         return baudrate, client
     else:
         # Set the new baudrate
-        new_baudrate = int(args.set_baudrate)
+        new_baudrate = int(set_baudrate)
         if meter_brand == 'Eastron':
             new_value = list(baudrate_dict.keys())[list(baudrate_dict.values()).index(new_baudrate)]
         elif meter_brand == 'Fineco':
@@ -490,19 +489,22 @@ def modbus_baudrate(args, client=None, read_only=None):
             # Let us sleep for a sec as a precaution for the meter to adapt to the new reality
             time.sleep(1)
             client = connect(args, new_baudrate)
-            new_baudrate, client = modbus_baudrate(args, client=client, read_only=True)
-        return new_baudrate, client
+            new_baudrate, client = modbus_baudrate(args, client=client)
 
 
-def modbus_unit_id(args, unit_id=None, client=None, read_only=None):
+def modbus_unit_id(args, client=None, unit_id=None, set_unit_id=None):
     """Read and write the configured unit id of the meter"""
     if not unit_id:
         unit_id = args.unit_id
     # Get the current unit id
     reading = modbus_req(args, 'unit_id', client=client, unit_id=unit_id)
-    unit_id = int(reading['value'])
-    print(f'The meter reports unit id: {unit_id}')
-    if read_only or not args.set_unit_id:
+    reported_unit_id = int(reading['value'])
+    print(f'The meter reports unit id: {reported_unit_id}')
+    if unit_id != reported_unit_id:
+        print(f'WARNING the meter with unit id {unit_id} is reporting unit id {reported_unit_id}. '
+              f'That is weird!\nExiting!', file=sys.stderr)
+        sys.exit(1)
+    if not set_unit_id:
         return unit_id
 
     # Note: In a perfect world we would check if the new unit id not used by anyone else,
@@ -510,39 +512,42 @@ def modbus_unit_id(args, unit_id=None, client=None, read_only=None):
     #
     # Set the new modbus id
     print(f'Setting the unit id to: {args.set_unit_id}')
-    reading = modbus_req(args, 'set_unit_id', payload=args.set_unit_id, client=client)
+    reading = modbus_req(args, 'set_unit_id', payload=set_unit_id, client=client)
     # Check if the new modbus id is answering
-    unit_id = modbus_unit_id(args, client=client, unit_id=args.set_unit_id, read_only=True)
+    unit_id = modbus_unit_id(args, client=client, unit_id=set_unit_id)
     if not unit_id == args.set_unit_id:
         print('WARNING wait what? The new unit id does not match what we set (how could this have happened?)')
     return unit_id
 
 
-def modbus_serial(args, client=None, read_only=None):
+def modbus_serial(args, client=None, set_serial=None):
     """Get the configured serial number of the meter"""
+    # Read the serial
     for register_name in ['serial_no', 'serial_no_bin', 'serial_no_hex']:
         reading = modbus_req(args, register_name, client=client)
         serial_no = reading['value']
         print(f'{register_name}: {serial_no} {reading["info_text"]}')
-    if not read_only and args.set_serial:
+
+    if set_serial:
+        # Write the serial
         if args.meter_model[:2] != 'EM':
             # It is not a Fineco meter
             print('ERROR it is only possible to change the serial number for Fineco meters.\nExiting!', file=sys.stderr)
             sys.exit(1)
         else:
             # It is a Fineco meter
-            if args.set_serial[:2] == '0x':
+            if set_serial[:2] == '0x':
                 # Its hex
-                new_serial_value = int(args.set_serial, 16)
-            elif args.set_serial[:2] == '0b':
-                new_serial_value = int(args.set_serial, 2)
+                new_serial_value = int(set_serial, 16)
+            elif set_serial[:2] == '0b':
+                new_serial_value = int(set_serial, 2)
             else:
                 # It is neither hex nor binary, then it must be an integer
-                new_serial_value = int(args.set_serial)
+                new_serial_value = int(set_serial)
             # Set the serial number
-            print(f'Setting the serial number to: {args.set_serial} / {new_serial_value} (int)')
+            print(f'Setting the serial number to: {set_serial} / {new_serial_value} (int)')
             reading = modbus_req(args, 'set_serial_no', payload=new_serial_value, client=client)
-            modbus_serial(args, client=client, read_only=True)
+            modbus_serial(args, client=client)
         
     return serial_no
 
@@ -588,17 +593,29 @@ def main():
         # Fetch some more registers
         readings = modbus_req_alot(args, client=client, printout=True)
 
-    if args.get_relay or args.set_relay:
+    if args.get_relay:
         state = modbus_relay(args, client=client)
 
-    if args.get_baudrate or args.set_baudrate:
+    if args.set_relay:
+        state = modbus_relay(args, client=client, set_relay=args.set_relay)
+
+    if args.get_baudrate:
         baudrate, client = modbus_baudrate(args, client=client)
 
-    if args.get_unit_id or args.set_unit_id:
+    if args.set_baudrate:
+        baudrate, client = modbus_baudrate(args, client=client, set_baudrate=args.set_baudrate)
+
+    if args.get_unit_id:
         unit_id = modbus_unit_id(args, client=client)
 
-    if args.get_serial or args.set_serial:
+    if args.set_unit_id:
+        unit_id = modbus_unit_id(args, client=client, set_unit_id=args.set_unit_id)
+
+    if args.get_serial:
         modbus_serial(args, client=client)
+
+    if args.set_serial:
+        modbus_serial(args, client=client, set_serial=args.set_serial)
 
     # Finishing up
     client.close()
