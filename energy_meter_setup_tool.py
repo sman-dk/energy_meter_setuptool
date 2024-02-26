@@ -494,7 +494,7 @@ def modbus_baudrate(args, client=None, read_only=None):
         return new_baudrate, client
 
 
-def modbus_unit_id(args, unit_id=None, client=None):
+def modbus_unit_id(args, unit_id=None, client=None, read_only=None):
     """Read and write the configured unit id of the meter"""
     if not unit_id:
         unit_id = args.unit_id
@@ -502,7 +502,7 @@ def modbus_unit_id(args, unit_id=None, client=None):
     reading = modbus_req(args, 'unit_id', client=client, unit_id=unit_id)
     unit_id = int(reading['value'])
     print(f'The meter reports unit id: {unit_id}')
-    if not args.set_unit_id:
+    if read_only or not args.set_unit_id:
         return unit_id
 
     # Note: In a perfect world we would check if the new unit id not used by anyone else,
