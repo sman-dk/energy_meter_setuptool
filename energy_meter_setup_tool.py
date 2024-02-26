@@ -465,7 +465,7 @@ def modbus_baudrate(args, client=None, read_only=None):
 
     print(f'The meter reports a baudrate of: {baudrate}')
 
-    if not args.set_baudrate or not read_only:
+    if read_only or not args.set_baudrate:
         return baudrate, client
     else:
         # Set the new baudrate
@@ -490,7 +490,7 @@ def modbus_baudrate(args, client=None, read_only=None):
             # Let us sleep for a sec as a precaution for the meter to adapt to the new reality
             time.sleep(1)
             client = connect(args, new_baudrate)
-            new_baudrate, client = modbus_baudrate(args, client=client)
+            new_baudrate, client = modbus_baudrate(args, client=client, read_only=True)
         return new_baudrate, client
 
 
