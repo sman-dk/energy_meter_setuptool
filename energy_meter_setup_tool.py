@@ -490,6 +490,7 @@ def modbus_baudrate(args, client=None, set_baudrate=None):
             time.sleep(1)
             client = connect(args, new_baudrate)
             new_baudrate, client = modbus_baudrate(args, client=client)
+        return new_baudrate, client
 
 
 def modbus_unit_id(args, client=None, unit_id=None, set_unit_id=None):
