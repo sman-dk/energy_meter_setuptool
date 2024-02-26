@@ -1,5 +1,4 @@
 # energy_meter_setuptool
-OBS: THIS IS CURRENTLY WORK IN PROGRESS - CHECK BACK LATER
 
 Command line tool to communicate with energy meters from Fineco and Eastron via modbus.
 
