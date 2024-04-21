@@ -7,7 +7,6 @@ import argparse
 import sys
 import struct
 import pymodbus.client as modbus_client
-from pymodbus import ModbusException
 import time
 
 
@@ -310,10 +309,11 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
     return {'value': value, 'info_text': info_text}
 
 
-def modbus_req_alot(args, client=None, printout=False):
+def modbus_req_multiple(args, client=None, printout=False, reg_names=None):
     """Fetch a lot bunch of registers. Used for "curious mode" where we fetch a bunch of registers if available"""
-    reg_names = ['kWh', 'imp_kWh', 'power', 'L1A', 'L2A', 'L3A', 'L1V', 'L2V', 'L3V', 'Totpf', 'TotHz',
-                 'serial_no', 'serial_no_bin', 'serial_no_hex', 'relay_state']
+    if not reg_names:
+        reg_names = ['kWh', 'imp_kWh', 'power', 'L1A', 'L2A', 'L3A', 'L1V', 'L2V', 'L3V', 'Totpf', 'TotHz',
+                     'serial_no', 'serial_no_bin', 'serial_no_hex', 'relay_state']
     result = []
     for register_name in reg_names:
         reading = modbus_req(args, register_name, client=client)
@@ -549,19 +549,31 @@ def main():
     dev_group = parser.add_mutually_exclusive_group()
     dev_group.add_argument('-p', '--serial-port', help='Serial port')
     dev_group.add_argument('--host', help='Hostname (if modbus gateway)')
-    parser.add_argument('-b', '--baudrate', help='Serial baudrate to use when communicating with modbus rtu using a serial port', default=9600, type=int)
-    parser.add_argument('--get-baudrate', help='Get configured serial baudrate of the meter', action='store_true')
-    ch_group.add_argument('--set-baudrate', help='Set the serial baudrate', choices=['1200', '2400', '4800', '9600', '19200', '38400'])
+    parser.add_argument('-b', '--baudrate', help='Serial baudrate to use when communicating with modbus '
+                                                 'rtu using a serial port', default=9600, type=int)
+    parser.add_argument('--get-baudrate', help='Get configured serial baudrate of the meter',
+                        action='store_true')
+    ch_group.add_argument('--set-baudrate', help='Set the serial baudrate',
+                          choices=['1200', '2400', '4800', '9600', '19200', '38400'])
     parser.add_argument('--tcp-port', help='Modbus gateway TCP port', default=502, type=int)
-    parser.add_argument('-c', '--curious', help='Curious mode. Ask the meter about various registers', action='store_true')
-    parser.add_argument('-m', '--meter-model', help='Meter model', choices=['EM115', 'EM737', 'SDM72', 'SDM120', 'SDM230', 'SDM630'], required=True)
+    parser.add_argument('-c', '--curious', help='Curious mode. Ask the meter about various registers',
+                        action='store_true')
+    parser.add_argument('--kwh', help='Get meter reading in kWh', action='store_true')
+    parser.add_argument('--power', help='Get power reading in Watt', action='store_true')
+    parser.add_argument('-m', '--meter-model', help='Meter model',
+                        choices=['EM115', 'EM737', 'SDM72', 'SDM120', 'SDM230', 'SDM630'], required=True)
     parser.add_argument('--get-relay', help='Get relay state', action='store_true')
-    ch_group.add_argument('--set-relay', help='Set relay state', choices=['on', 'off', 'auto', '0', '1'], default=False)
-    parser.add_argument('-u', '--unit-id', help='Modbus unit id to use (1-255). This is the "slave id" or "address" of the modbus slave', default='1', type=address_limit)
+    ch_group.add_argument('--set-relay', help='Set relay state', choices=['on', 'off', 'auto', '0', '1'],
+                          default=False)
+    parser.add_argument('-u', '--unit-id',
+                        help='Modbus unit id to use (1-255). This is the "slave id" or "address" of the modbus slave',
+                        default='1', type=address_limit)
     parser.add_argument('--get-unit-id', help='Get configured unit id of the meter', action='store_true')
     ch_group.add_argument('--set-unit-id', help='Set modbus unit id (1-255)', type=address_limit, )
-    parser.add_argument('--get-serial', help='Get configured serial number of the meter', action='store_true')
-    ch_group.add_argument('--set-serial', help='Set serial number. Multiple types are supported: Integers (e.g. "1234"), hexadecimal (e.g. "0x4d2") and binary (e.g. "0b10011010010")', type=str)
+    parser.add_argument('--get-serial', help='Get configured serial number of the meter',
+                        action='store_true')
+    ch_group.add_argument('--set-serial', help='Set serial number. Multiple types are supported: Integers '
+                          '(e.g. "1234"), hexadecimal (e.g. "0x4d2") and binary (e.g. "0b10011010010")', type=str)
     parser.add_argument('-t', '--timeout', help='Timeout in seconds', default=2, type=int)
     args = parser.parse_args()
     if not args.serial_port and not args.host:
@@ -578,7 +590,13 @@ def main():
 
     if args.curious:
         # Fetch some more registers
-        readings = modbus_req_alot(args, client=client, printout=True)
+        readings = modbus_req_multiple(args, client=client, printout=True)
+
+    if args.kwh:
+        readings = modbus_req_multiple(args, client=client, printout=True, reg_names=['kWh'])
+
+    if args.power:
+        readings = modbus_req_multiple(args, client=client, printout=True, reg_names=['power'])
 
     if args.get_relay:
         state = modbus_relay(args, client=client)
