@@ -560,6 +560,8 @@ def main():
                         action='store_true')
     parser.add_argument('--kwh', help='Get meter reading in kWh', action='store_true')
     parser.add_argument('--power', help='Get power reading in Watt', action='store_true')
+    parser.add_argument('--no-voltage-test', help='Disable the initial voltage sanity check',
+                        action='store_true')
     parser.add_argument('-m', '--meter-model', help='Meter model',
                         choices=['EM115', 'EM737', 'SDM72', 'SDM120', 'SDM230', 'SDM630'], required=True)
     parser.add_argument('--get-relay', help='Get relay state', action='store_true')
@@ -586,7 +588,8 @@ def main():
     client = connect(args)
 
     # Voltage test
-    voltage_test(args, client=client)
+    if not args.no_voltage_test:
+        voltage_test(args, client=client)
 
     if args.curious:
         # Fetch some more registers
