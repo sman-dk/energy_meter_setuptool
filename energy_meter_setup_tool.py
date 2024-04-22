@@ -355,14 +355,14 @@ def modbus_relay(args, client=None, set_relay=None):
         print(f'ERROR relay_state() called with relay state "{set_relay}" '
               f'which is not supported!\nExiting!', file=sys.stderr)
         sys.exit(1)
-
-    # Get relay state
-    cur_state = get_relay_state(args, client=client)
-    if set_relay == cur_state:
-        # There is really not much for us to do here...
-        print(f'Relay state is already: {cur_state}')
-        return cur_state
-    print(f'Current relay state is: {cur_state}')
+    if not set_relay:
+        # Get relay state
+        cur_state = get_relay_state(args, client=client)
+        # if set_relay == cur_state:
+        #     # There is really not much for us to do here...
+        #     print(f'Relay state is already: {cur_state}')
+        #     return cur_state
+        print(f'Current relay state is: {cur_state}')
 
     # Get serial
     reading = modbus_req(args, 'serial_no', client=client)
