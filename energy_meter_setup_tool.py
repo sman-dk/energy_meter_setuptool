@@ -392,7 +392,7 @@ def modbus_relay(args, client=None, set_relay=None):
     return cur_state
 
 
-def voltage_test(args, client=None):
+def voltage_check(args, client=None):
     """Read the voltage and complain if it is outside boundries"""
     print(f'\nTrying to get voltage from meter model {args.meter_model} with unit id {args.unit_id} \n')
     reading = modbus_req(args, 'L1V', client=client)
@@ -560,7 +560,7 @@ def main():
                         action='store_true')
     parser.add_argument('--kwh', help='Get meter reading in kWh', action='store_true')
     parser.add_argument('--power', help='Get power reading in Watt', action='store_true')
-    parser.add_argument('--no-voltage-test', help='Disable the initial voltage sanity check',
+    parser.add_argument('--no-voltage-check', help='Disable the initial voltage sanity check',
                         action='store_true')
     parser.add_argument('-m', '--meter-model', help='Meter model',
                         choices=['EM115', 'EM737', 'SDM72', 'SDM120', 'SDM230', 'SDM630'], required=True)
@@ -588,8 +588,8 @@ def main():
     client = connect(args)
 
     # Voltage test
-    if not args.no_voltage_test:
-        voltage_test(args, client=client)
+    if not args.no_voltage_check:
+        voltage_check(args, client=client)
 
     if args.curious:
         # Fetch some more registers
