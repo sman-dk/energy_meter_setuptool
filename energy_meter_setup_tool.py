@@ -316,6 +316,9 @@ def modbus_req_multiple(args, client=None, printout=False, reg_names=None):
                      'serial_no', 'serial_no_bin', 'serial_no_hex', 'relay_state']
     result = []
     for register_name in reg_names:
+        if args.meter_model == 'EM737':
+            # Fixing an issue with EM737 that does not always respond when asked too often..
+            time.sleep(.2)
         reading = modbus_req(args, register_name, client=client)
         result.append(reading)
         if printout:
@@ -400,7 +403,7 @@ def voltage_check(args, client=None):
     print('Voltage is %.1f V' % voltage, end=' ')
     # a tolerance of 0.1 means +/- 10%
     tolerance = 0.1 
-    if 115*(1-tolerance) < voltage < 115*(1+tolerance) and 230*(1-tolerance) < voltage < 230*(1+tolerance):
+    if not 115*(1-tolerance) < voltage < 115*(1+tolerance) and not 230*(1-tolerance) < voltage < 230*(1+tolerance):
         voltage_ok = False
     else:
         voltage_ok = True
