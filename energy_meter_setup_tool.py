@@ -467,7 +467,7 @@ def modbus_baudrate(args, client=None, set_baudrate=None):
             sys.exit(1)
         print('OBS remember to put the meter into "set" mode!')
         print(f'Setting the baudrate to {new_baudrate}')
-        reading = modbus_req(args, 'set_baudrate', payload=new_value, client=client)
+        reading = modbus_req(args, 'set_baudrate', payload=[new_value], client=client)
         # Close the current connection and open a new
         # (only if it is a serial connection, for modbus gateways the setting on the gateway must be changed
         if not args.serial_port:
