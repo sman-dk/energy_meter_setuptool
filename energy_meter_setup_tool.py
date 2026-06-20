@@ -255,9 +255,9 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
     else:
         function_code, address, count, info_text, data_type = mregs[register_name]
         if function_code == 3:
-            res = client.read_holding_registers(address=address, count=count, slave=unit_id)
+            res = client.read_holding_registers(address=address, count=count, device_id=unit_id)
         elif function_code == 4:
-            res = client.read_input_registers(address=address, count=count, slave=unit_id)
+            res = client.read_input_registers(address=address, count=count, device_id=unit_id)
         elif function_code == 16:
             if payload is None:
                 print(f'ERROR missing payload for {register_name}\nExiting!', sys.stderr)
@@ -271,7 +271,7 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
                     print(f'ERROR data type for {register_name} using function code {function_code} is not supported. '
                           f'Please check the script.\nExiting!', sys.stderr)
                     sys.exit(1)
-            res = client.write_registers(address=address, values=payload, slave=unit_id)
+            res = client.write_registers(address=address, values=payload, device_id=unit_id)
         else:
             print('ERROR: Unsupported function code. This should not be happening '
                   '(check that all function codes are supported in the script).\nExiting!', file=sys.stderr)
