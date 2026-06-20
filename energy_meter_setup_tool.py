@@ -98,7 +98,7 @@ def connect(args, new_baudrate=None):
         print('Neither a serial port or a host has been defined. '
               'I can not work like this!!\nExiting!', file=sys.stderr)
         sys.exit(1)
- 
+
     return client
 
 
@@ -111,7 +111,7 @@ def fineco_generate_key(meter_serial_number):
     return tmp
 
 
-def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
+def modbus_req(args, register_name, client=None, payload=None, unit_id=None, broadcast=False):
     """Fetch a register from a meter and return the value as a result"""
     assert type(register_name) is str
     if not client:
@@ -121,7 +121,7 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
 
     # Function code, hex address, count/length of registers to read (multiple of 2 bytes, i.e. 2=4bytes),
     # info text (e.g. unit), response type (how to interpret the response)
-    meter_regs = { 
+    meter_regs = {
                 'SDM72': {
                     'kWh': [4, 0x156, 2, 'kWh', 'F32'],
                     'imp_kWh': [4, 0x48, 2, 'kWh', 'F32'],
@@ -221,7 +221,7 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
                     'set_baudrate': [16, 0x525, 1, '', ''],
                     'unit_id': [4, 0x524, 1, '(modbus id/address)', 'U16'],
                     'set_unit_id': [16, 0x524, 1, '', ''],
-                     }, 
+                     },
                 'EM737': {
                     'kWh': [4, 0x700, 2, 'kWh', 'F32'],
                     'imp_kWh': [4, 0x800, 2, 'kWh', 'F32'],
@@ -260,7 +260,7 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
             res = client.read_input_registers(address=address, count=count, device_id=unit_id)
         elif function_code == 16:
             if payload is None:
-                print(f'ERROR missing payload for {register_name}\nExiting!', sys.stderr)
+                print(f'ERROR missing payload for {register_name}\nExiting!', file=sys.stderr)
                 sys.exit(1)
             if data_type:
                 if data_type == 'F32':
@@ -269,9 +269,20 @@ def modbus_req(args, register_name, client=None, payload=None, unit_id=None):
                     payload = reverse_u32(payload)
                 else:
                     print(f'ERROR data type for {register_name} using function code {function_code} is not supported. '
-                          f'Please check the script.\nExiting!', sys.stderr)
+                          f'Please check the script.\nExiting!', file=sys.stderr)
                     sys.exit(1)
-            res = client.write_registers(address=address, values=payload, device_id=unit_id)
+            # pymodbus >= 3.10 requires "values" to be a list; a bare scalar raises
+            # "object of type 'int' has no len()". Coerce scalars (set_unit_id, set_baudrate).
+            if not isinstance(payload, (list, tuple)):
+                payload = [payload]
+            if broadcast:
+                # Commissioning write to the Modbus broadcast address (device id 0).
+                # No slave replies, so there is nothing to parse; only the meter
+                # currently held in "set" mode applies the change.
+                client.write_registers(address=address, values=list(payload),
+                                       device_id=0, no_response_expected=True)
+                return {'value': None, 'info_text': info_text}
+            res = client.write_registers(address=address, values=list(payload), device_id=unit_id)
         else:
             print('ERROR: Unsupported function code. This should not be happening '
                   '(check that all function codes are supported in the script).\nExiting!', file=sys.stderr)
@@ -402,7 +413,7 @@ def voltage_check(args, client=None):
     voltage = reading['value']
     print('Voltage is %.1f V' % voltage, end=' ')
     # a tolerance of 0.1 means +/- 10%
-    tolerance = 0.1 
+    tolerance = 0.1
     if not 115*(1-tolerance) < voltage < 115*(1+tolerance) and not 230*(1-tolerance) < voltage < 230*(1+tolerance):
         voltage_ok = False
     else:
@@ -429,7 +440,7 @@ def modbus_baudrate(args, client=None, set_baudrate=None):
         print(f'ERROR Baudrate settings for meter model {args.meter_model} '
               f'is not supported in this script.\nExiting!', file=sys.stderr)
         sys.exit(1)
-    
+
     # Fetch the raw value
     reading = modbus_req(args, 'baudrate', client=client)
     value = reading['value']
@@ -467,7 +478,7 @@ def modbus_baudrate(args, client=None, set_baudrate=None):
             sys.exit(1)
         print('OBS remember to put the meter into "set" mode!')
         print(f'Setting the baudrate to {new_baudrate}')
-        reading = modbus_req(args, 'set_baudrate', payload=[new_value], client=client)
+        reading = modbus_req(args, 'set_baudrate', payload=new_value, client=client)
         # Close the current connection and open a new
         # (only if it is a serial connection, for modbus gateways the setting on the gateway must be changed
         if not args.serial_port:
@@ -489,6 +500,29 @@ def modbus_unit_id(args, client=None, unit_id=None, set_unit_id=None):
     """Read and write the configured unit id of the meter"""
     if not unit_id:
         unit_id = args.unit_id
+
+    # Commissioning mode: several meters may share one address (factory default 1).
+    # We must NOT read first (their replies would collide on the bus). Only the meter
+    # currently held in "set" mode accepts the broadcast write to device id 0.
+    if getattr(args, 'broadcast', False) and set_unit_id:
+        print('Broadcast mode: ensure exactly ONE meter is in "set" mode right now.')
+        print(f'Broadcasting new unit id {set_unit_id} to device id 0 (no reply expected)')
+        modbus_req(args, 'set_unit_id', payload=set_unit_id, client=client, broadcast=True)
+        # The changed meter now has a unique address; read it back to confirm.
+        time.sleep(1)
+        try:
+            reading = modbus_req(args, 'unit_id', client=client, unit_id=set_unit_id)
+            reported_unit_id = int(reading['value'])
+        except Exception as e:
+            print(f'WARNING no meter answered at the new unit id {set_unit_id} ({e}).', file=sys.stderr)
+            print('The broadcast was likely not applied. Was exactly one meter in "set" mode? '
+                  'Does your gateway forward device id 0 (broadcast) onto the RS485 bus?', file=sys.stderr)
+            return None
+        print(f'The meter now reports unit id: {reported_unit_id}')
+        if reported_unit_id != set_unit_id:
+            print('WARNING the new unit id was not confirmed. Was a meter in "set" mode?', file=sys.stderr)
+        return reported_unit_id
+
     # Get the current unit id
     reading = modbus_req(args, 'unit_id', client=client, unit_id=unit_id)
     reported_unit_id = int(reading['value'])
@@ -541,7 +575,7 @@ def modbus_serial(args, client=None, set_serial=None):
             print(f'Setting the serial number to: {set_serial} / {new_serial_value} (int)')
             reading = modbus_req(args, 'set_serial_no', payload=new_serial_value, client=client)
             modbus_serial(args, client=client)
-        
+
     return serial_no
 
 
@@ -578,6 +612,11 @@ def main():
                         default='1', type=address_limit)
     parser.add_argument('--get-unit-id', help='Get configured unit id of the meter', action='store_true')
     ch_group.add_argument('--set-unit-id', help='Set modbus unit id (1-255)', type=address_limit, )
+    parser.add_argument('--broadcast', action='store_true',
+                        help='Commissioning helper for --set-unit-id: write the new unit id to the Modbus '
+                             'broadcast address (device id 0) so only the meter currently held in "set" mode '
+                             'changes, and skip the pre-write address read (avoids bus collisions when several '
+                             'meters share one address). Implies no voltage check.')
     parser.add_argument('--get-serial', help='Get configured serial number of the meter',
                         action='store_true')
     ch_group.add_argument('--set-serial', help='Set serial number. Multiple types are supported: Integers '
@@ -588,13 +627,18 @@ def main():
         print("ERROR: at least one of the following arguments must be set: --serial-port or --host")
         sys.exit(1)
 
+    if args.broadcast and not args.set_unit_id:
+        print('ERROR --broadcast is only meaningful together with --set-unit-id.\nExiting!', file=sys.stderr)
+        sys.exit(1)
+
     print('Starting energy meter setup tool')
 
     # Connect
     client = connect(args)
 
-    # Voltage test
-    if not args.no_voltage_check:
+    # Voltage test (skipped in broadcast mode: meters may share an address, so a
+    # voltage read would collide on the bus)
+    if not args.no_voltage_check and not args.broadcast:
         voltage_check(args, client=client)
 
     if args.curious:
